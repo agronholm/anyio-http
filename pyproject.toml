@@ -1,0 +1,167 @@
+[build-system]
+requires = [
+    "setuptools >= 77",
+    "setuptools_scm >= 6.4"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "anyio-http"
+description = "HTTP client library based on AnyIO"
+readme = "README.rst"
+authors = [{name = "Alex Grönholm", email = "alex.gronholm@nextday.fi"}]
+license = "MIT"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Framework :: AnyIO",
+    "Typing :: Typed",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+requires-python = ">= 3.10"
+dependencies = [
+    "anyio@git+https://git@github.com/agronholm/anyio.git",
+    "h11 >= 0.16.0",
+    "h2 >= 4.2.0",
+    "multidict >= 6.5.0",
+    "typing_extensions >= 4.5; python_version < '3.13'",
+    "yarl >= 1.20.1",
+    "wsproto >= 1.2.0",
+]
+dynamic = ["version"]
+
+[project.urls]
+Documentation = "https://anyio-http.readthedocs.io/en/latest/"
+Changelog = "https://anyio-http.readthedocs.io/en/stable/versionhistory.html"
+"Source code" = "https://github.com/agronholm/anyio-http"
+"Issue tracker" = "https://github.com/agronholm/anyio-http/issues"
+
+[project.optional-dependencies]
+brotli = [
+    "Brotli >= 1.1.0; python_implementation == 'CPython'",
+    "brotlicffi >= 1.1.0; python_implementation != 'CPython'",
+]
+cbor = [
+    "cbor2 >= 5.6.5",
+]
+json = [
+    "orjson >= 3.10.18",
+]
+opentelemetry = [
+    "opentelemetry-api >= 1.34.1",
+]
+zstd = [
+    "zstandard >= 0.23.0; python_version < '3.14'",
+]
+
+[dependency-groups]
+test = [
+    "anyio[trio]@git+https://git@github.com/agronholm/anyio.git",
+    "anyio-http[brotli,cbor,json,opentelemetry,zstd]",
+    "coverage[toml] >= 7",
+    "pytest >= 8.0",
+    "sse-starlette >= 2.3.6",
+    "starlette[full] >= 0.47.1",
+    "trustme",
+    "hypercorn >= 0.17.3",
+]
+doc = [
+    "packaging",
+    "Sphinx ~= 8.2",
+    "sphinx_rtd_theme",
+    "sphinx-autodoc-typehints >= 1.2.0",
+    "sphinx-tabs >= 3.3.1",
+]
+
+[tool.setuptools_scm]
+version_scheme = "post-release"
+local_scheme = "dirty-tag"
+
+[tool.ruff]
+src = ["src"]
+
+[tool.ruff.lint]
+extend-select = [
+    "ASYNC",        # flake8-async
+    "B",            # flake8-bugbear
+    "C4",           # flake8-comprehensions
+    "G",            # flake8-logging-format
+    "I",            # isort
+    "ISC",          # flake8-implicit-str-concat
+    "PERF",         # flake8-performance
+    "PGH",          # pygrep-hooks
+    "RUF100",       # unused noqa (yesqa)
+    "T201",         # print
+    "UP",           # pyupgrade
+    "W",            # pycodestyle warnings
+]
+ignore = ["B009", "PERF203"]
+
+[tool.ruff.lint.isort]
+"required-imports" = ["from __future__ import annotations"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+disallow_any_generics = false
+warn_return_any = false
+disallow_untyped_decorators = false
+ignore_missing_imports = true
+exclude = "^docs/conf.py"
+
+[tool.pytest.ini_options]
+addopts = "-rsfE --tb=short"
+testpaths = ["tests"]
+xfail_strict = true
+filterwarnings = [
+    "error",
+]
+markers = [
+    "network: marks tests as requiring Internet access",
+]
+
+[tool.coverage.run]
+source = ["anyio_http"]
+relative_files = true
+
+[tool.coverage.report]
+show_missing = true
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.tox]
+env_list = ["pre-commit", "py310", "py311", "py312", "py313", "py314", "pypy3"]
+skip_missing_interpreters = true
+requires = ["tox >= 4.22"]
+
+[tool.tox.env_run_base]
+depends = ["pre-commit"]
+package = "editable"
+commands = [["coverage", "run", "-m", "pytest", { replace = "posargs", extend = true }]]
+dependency_groups = ["test"]
+
+[tool.tox.env.pypy3]
+commands = [["pytest", { replace = "posargs", extend = true }]]
+
+[tool.tox.env.pre-commit]
+commands = [["pre-commit", "run", "--all-files"]]
+depends = []
+allowlist_externals = ["pre-commit"]
+package = "skip"
+
+[tool.tox.env.pyright]
+deps = ["pyright"]
+commands = [["pyright", "--verifytypes", "anyio-http"]]
+
+[tool.tox.env.docs]
+depends = []
+dependency_groups = ["doc"]
+commands = [["sphinx-build", "-W", "docs", "build/sphinx"]]
