@@ -33,7 +33,6 @@ from ._auth import Authenticator, BasicAuth
 from ._connection import HTTPConnection
 from ._cookies import Cookie
 from ._decoders import ContentDecoder
-from ._encoders import ContentEncoder
 from ._http2 import HTTP2Connection
 from ._http11 import HTTP11Connection
 from ._response import HTTPResponse
@@ -197,7 +196,6 @@ class HTTPClient(AsyncContextManagerMixin):
         use_http2: bool = True,
         max_redirects: int = 20,
         content_decoders: Sequence[ContentDecoder] = (),
-        content_encoders: Sequence[ContentEncoder | str] = (),
     ):
         self.base_url = URL(base_url) if base_url else None
         self.app_or_connectable = app_or_connectable
