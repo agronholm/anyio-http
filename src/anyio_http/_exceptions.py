@@ -20,12 +20,12 @@ class HTTPStatusError(HTTPError):
     def __init__(
         self,
         status_code: int,
-        headers: CIMultiDictProxy | None = None,
+        headers: CIMultiDictProxy[str] | None = None,
         body: bytes | None = None,
     ):
         super().__init__(status_code, body)
         self.status_code = status_code
-        self.headers = (
+        self.headers: CIMultiDictProxy[str] = (
             headers if headers is not None else CIMultiDictProxy(CIMultiDict())
         )
         self.body = body

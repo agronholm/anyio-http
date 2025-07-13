@@ -28,7 +28,7 @@ class ContentWrapper(metaclass=ABCMeta):
     __slots__ = ("content_type",)
 
     def __init__(self, *, content_type: str):
-        self.content_type = content_type
+        self.content_type: str = content_type
 
     @abstractmethod
     def to_body(self) -> bytes | ByteReceiveStream:
@@ -48,9 +48,9 @@ class JSON(ContentWrapper):
         default: Callable[[Any], Any] | None = None,
     ):
         super().__init__(content_type=content_type)
-        self.value = value
-        self.pretty = pretty
-        self.default = default
+        self.value: JSONType = value
+        self.pretty: bool = pretty
+        self.default: Callable[[Any], Any] | None = default
 
     @staticmethod
     @lru_cache(1)
@@ -94,8 +94,8 @@ class CBOR(ContentWrapper):
         kwargs: Mapping[str, Any] | None = None,
     ):
         super().__init__(content_type=content_type)
-        self.value = value
-        self.kwargs = kwargs or {}
+        self.value: JSONType = value
+        self.kwargs: Mapping[str, Any] = kwargs or {}
 
     @staticmethod
     @lru_cache(1)

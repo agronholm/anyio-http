@@ -16,7 +16,7 @@ def get_decoder(name: str) -> type[ContentDecoder]:
 class ContentDecoder(ByteReceiveStream):
     name: ClassVar[str]
 
-    def __init_subclass__(cls, *, decoder: str):
+    def __init_subclass__(cls, *, decoder: str) -> None:
         cls.name = decoder
         registered_decoders[decoder] = cls
 

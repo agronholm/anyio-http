@@ -30,7 +30,7 @@ class HTTPResponseAttribute(TypedAttributeSet):
     #: HTTP version ("1.1", "2", etc.)
     http_version: str = typed_attribute()
     #: HTTP response headers
-    headers: CIMultiDictProxy = typed_attribute()
+    headers: CIMultiDictProxy[str] = typed_attribute()
 
 
 @dataclass(eq=False)
@@ -61,7 +61,7 @@ class HTTPResponse(ByteReceiveStream):
 
     @property
     @final
-    def headers(self) -> CIMultiDictProxy:
+    def headers(self) -> CIMultiDictProxy[str]:
         return self.extra(HTTPResponseAttribute.headers)
 
     @final

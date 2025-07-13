@@ -144,7 +144,7 @@ class HTTPRequest(AsyncContextManagerMixin):
         pool: ConnectionPool,
         method: str,
         url: URL,
-        headers: CIMultiDict,
+        headers: CIMultiDict[str],
         body: ByteReceiveStream | None = None,
     ) -> None:
         self._pool = pool
@@ -199,12 +199,12 @@ class HTTPClient(AsyncContextManagerMixin):
     ):
         self.base_url = URL(base_url) if base_url else None
         self.app_or_connectable = app_or_connectable
-        self.auth = auth
+        self.auth: Authenticator | None = auth
         self.timeout = timeout
-        self.ssl_context = ssl_context or create_default_context()
+        self.ssl_context: SSLContext = ssl_context or create_default_context()
         self.follow_redirects = follow_redirects
         self.max_redirects = max_redirects
-        self.headers = CIMultiDict(headers if headers else ())
+        self.headers: CIMultiDict[str] = CIMultiDict(headers if headers else ())
         self.headers.setdefault("user-agent", _default_user_agent)
         self._is_proxy = False
 
