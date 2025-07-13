@@ -21,7 +21,7 @@ jobs:
     - name: Install dependencies
       run: pip install -e . pyright pytest
     - name: Run pyright
-      run: pyright --verifytypes anyio-http
+      run: pyright --verifytypes anyio_http
 
   test:
     strategy:
