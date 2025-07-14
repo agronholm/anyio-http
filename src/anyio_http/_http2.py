@@ -170,14 +170,23 @@ class HTTP2Connection(HTTPConnection):
                                     event.flow_controlled_length,
                                     event.stream_id,
                                 )
-                        case ResponseReceived() | StreamEnded() | StreamReset():
+                        case ResponseReceived():
                             assert event.stream_id is not None
                             if event.stream_id > 0:
                                 send_stream = self._streams[event.stream_id]
                                 await send_stream.send(event)
-                                if isinstance(event, StreamEnded | StreamReset):
-                                    send_stream.close()
-                                    del self._streams[event.stream_id]
+                        case StreamEnded() | StreamReset():
+                            assert event.stream_id is not None
+                            if event.stream_id > 0:
+                                send_stream = self._streams[event.stream_id]
+                                try:
+                                    await send_stream.send(event)
+                                except BrokenResourceError:
+                                    # already closed from the HTTPResponseStream end
+                                    continue
+
+                                send_stream.close()
+                                del self._streams[event.stream_id]
                         case WindowUpdated():
                             assert event.stream_id is not None
                             if event.stream_id > 0:
@@ -320,7 +329,7 @@ class HTTP2Connection(HTTPConnection):
         )
         status_code = request_stream.extra(HTTPResponseAttribute.status_code)
         if status_code != 200:
-            body = b"".join([chunk async for chunk in request_stream])
+            body = b"".join([chunk async for chunk in request_stream]) or None
             raise HTTPStatusError(
                 status_code, request_stream.extra(HTTPResponseAttribute.headers), body
             )
@@ -370,9 +379,6 @@ class HTTP2ResponseStream(ByteStream):
         self._buffer = b""
         self._error_code: int | None = None
         self._closed = False
-        self._can_send_event = Event()
-        if h2_stream.outbound_flow_control_window:
-            self._can_send_event.set()
 
         # The HTTP/2 spec says that pseudo-headers must come first, and :status is
         # mandatory in responses
@@ -428,9 +434,6 @@ class HTTP2ResponseStream(ByteStream):
                     self._closed = True
                     self._receive_stream.close()
                     raise EndOfStream
-                case WindowUpdated():
-                    if self.h2_stream.outbound_flow_control_window:
-                        self._can_send_event.set()
                 case _:  # pragma: no cover
                     raise RuntimeError(f"unexpected event: {event}")
 

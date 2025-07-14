@@ -37,7 +37,8 @@ from ._exceptions import HTTPError, HTTPStatusError
 from ._response import HTTPResponseAttribute
 from ._websocket import (
     WebSocketAttribute,
-    WebSocketConnectionClosed,
+    WebSocketConnectionBroken,
+    WebSocketConnectionEnded,
 )
 
 if sys.version_info >= (3, 12):
@@ -331,12 +332,24 @@ class ASGIResponseStream(BaseASGIStream, ByteReceiveStream):
 
 
 class ASGIWebSocketStream(BaseASGIStream, ObjectStream[bytes | str]):
+    _close_code: int | None = None
+    _close_reason: str | None = None
+
     def __init__(self, request: ASGIRequest, response_event: ASGIEvent) -> None:
         super().__init__(request, response_event)
         self._subprotocol = cast(str | None, response_event.get("subprotocol"))
 
+    def _raise_close_error(self) -> NoReturn:
+        if self._close_code == 1000:
+            raise WebSocketConnectionEnded
+        else:
+            raise WebSocketConnectionBroken(self._close_code, self._close_reason)
+
     @override
     async def receive(self) -> bytes | str:
+        if self._close_code is not None:
+            self._raise_close_error()
+
         event = await self._request.receive_event_from_app()
         match event.get("type"):
             case "websocket.send":
@@ -352,19 +365,17 @@ class ASGIWebSocketStream(BaseASGIStream, ObjectStream[bytes | str]):
                     f"got malformed websocket.send event: {event}"
                 )
             case "websocket.close":
-                reason = cast(str | None, event.get("reason"))
-                if (code := event.get("code")) == 1000:
-                    raise WebSocketConnectionClosed(reason)
-                else:
-                    raise BrokenResourceError(
-                        f"server closed the connection (code: {code!r}, "
-                        f"reason: {reason})"
-                    )
+                self._close_code = cast(int, event.get("code", 1000))
+                self._close_reason = cast(str | None, event.get("reason") or None)
+                self._raise_close_error()
             case type_:
                 raise BrokenResourceError(f"unexpected ASGI event type: {type_!r}")
 
     @override
     async def send(self, item: bytes | str) -> None:
+        if self._close_code is not None:
+            raise WebSocketConnectionBroken(self._close_code, self._close_reason)
+
         if isinstance(item, str):
             await self._request.send_event_to_app(type="websocket.receive", text=item)
         else:
@@ -379,9 +390,10 @@ class ASGIWebSocketStream(BaseASGIStream, ObjectStream[bytes | str]):
         self, code: CloseReason = CloseReason.NORMAL_CLOSURE, reason: str | None = None
     ) -> None:
         try:
-            await self._request.send_event_to_app(
-                type="websocket.disconnect", code=int(code), reason=reason
-            )
+            if self._close_code is None:
+                await self._request.send_event_to_app(
+                    type="websocket.disconnect", code=int(code), reason=reason
+                )
         finally:
             await self._request.aclose()
 
@@ -390,4 +402,5 @@ class ASGIWebSocketStream(BaseASGIStream, ObjectStream[bytes | str]):
         return {
             **super().extra_attributes,
             WebSocketAttribute.subprotocol: lambda: self._subprotocol,
+            WebSocketAttribute.extensions: lambda: (),
         }

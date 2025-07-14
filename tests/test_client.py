@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import socket
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from functools import partial
 from ssl import SSLContext
@@ -23,6 +24,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, PlainTextResponse, Response
 from starlette.routing import Route, WebSocketRoute
 from starlette.websockets import WebSocket
+from wsproto.extensions import PerMessageDeflate
 from yarl import URL
 
 from anyio_http import (
@@ -34,6 +36,9 @@ from anyio_http import (
     HTTPClient,
     HTTPStatusError,
     ServerEvent,
+    WebSocketAttribute,
+    WebSocketConnectionBroken,
+    WebSocketConnectionEnded,
 )
 
 pytestmark = pytest.mark.anyio
@@ -92,7 +97,16 @@ async def ws_endpoint(websocket: WebSocket) -> None:
             await websocket.close(1008, "Policy violation")
             return
 
-    await websocket.accept()
+    subprotocols = websocket.scope.get("subprotocols", [])
+    await websocket.accept(subprotocol=subprotocols[0] if subprotocols else None)
+    match websocket.query_params.get("close_code"):
+        case "1000":
+            await websocket.close(1000)
+            return
+        case "1008":
+            await websocket.close(1008, "Policy violation")
+            return
+
     while True:
         message_dict = await websocket.receive()
         if text := message_dict.get("text"):
@@ -318,26 +332,26 @@ async def test_post_complex_multipart_form(
     )
     async with http_client:
         response = await http_client.post("/form", form, params={"hello": "world"})
-        # assert response.status_code == 200
-        # assert response.content_type == "application/json"
-        # response_dict = json.loads(response.text)
-        # assert response_dict == {
-        #     "textfield": "valueåäö",
-        #     "binaryfield": "\x06\x07\x08\x00",
-        #     "text file": {
-        #         "filename": "textfile.txt",
-        #         "size": 8,
-        #         "content_type": "text/plain",
-        #         "content": "content1",
-        #     },
-        #     "binary file": {
-        #         "filename": "image.jpg",
-        #         "size": 4,
-        #         "content_type": "image/jpeg",
-        #         "content": "\x00\\xff\x00\\xff",
-        #     },
-        #     "custom stream": "static stream data",
-        # }
+        assert response.status_code == 200
+        assert response.content_type == "application/json"
+        response_dict = json.loads(response.text)
+        assert response_dict == {
+            "textfield": "valueåäö",
+            "binaryfield": "\x06\x07\x08\x00",
+            "text file": {
+                "filename": "textfile.txt",
+                "size": 8,
+                "content_type": "text/plain",
+                "content": "content1",
+            },
+            "binary file": {
+                "filename": "image.jpg",
+                "size": 4,
+                "content_type": "image/jpeg",
+                "content": "\x00\\xff\x00\\xff",
+            },
+            "custom stream": "static stream data",
+        }
 
 
 # async def test_connect(proxy_url: URL, client_ssl_context: SSLContext) -> None:
@@ -355,26 +369,91 @@ async def test_post_complex_multipart_form(
 #                     assert await tunnel.receive() == b"!dlrow ,olleH"
 
 
-async def test_websocket(http_client: HTTPClient) -> None:
-    async with http_client, http_client.connect_ws("/ws") as ws:
-        await ws.send("Hello, world!")
-        assert await ws.receive() == "!dlrow ,olleH"
-        await ws.send(b"Hello, world!")
-        assert await ws.receive() == b"!dlrow ,olleH"
+class TestWebSocket:
+    async def test_accepted(self, http_client: HTTPClient) -> None:
+        async with http_client, http_client.connect_ws("/ws") as ws:
+            assert ws.extra(WebSocketAttribute.extensions) == ()
+            await ws.send("Hello, world!")
+            assert await ws.receive() == "!dlrow ,olleH"
+            await ws.send(b"Hello, world!")
+            assert await ws.receive() == b"!dlrow ,olleH"
 
+    async def test_extra_attributes(
+        self, http_client: HTTPClient, transport: str
+    ) -> None:
+        if transport == "asgi":
+            pytest.skip("ASGI does not have any socket attributes")
 
-@pytest.mark.parametrize("reject_method", ["close", "denial"])
-async def test_websocket_rejected(http_client: HTTPClient, reject_method: str) -> None:
-    async with http_client:
-        with pytest.raises(HTTPStatusError) as exc_info:
-            async with http_client.connect_ws("/ws", params={"reject": reject_method}):
-                pass
+        async with (
+            http_client,
+            http_client.connect_ws(
+                "/ws", subprotocols=["test"], extensions=[PerMessageDeflate()]
+            ) as ws,
+        ):
+            if transport == "asgi":
+                expected_extensions = ()
+            else:
+                expected_extensions = ("permessage-deflate",)
+                assert ws.extra(SocketAttribute.family) in (
+                    socket.AF_INET,
+                    socket.AF_INET,
+                )
+                assert isinstance(ws.extra(SocketAttribute.local_port), int)
+                assert isinstance(ws.extra(SocketAttribute.local_address), tuple)
+                assert isinstance(ws.extra(SocketAttribute.remote_port), int)
+                assert isinstance(ws.extra(SocketAttribute.remote_address), tuple)
+                assert ws.extra(SocketAttribute.raw_socket)
 
-    assert exc_info.value.status_code == 403
-    if reject_method == "denial":
-        assert exc_info.value.body == b"Rejected"
-    else:
-        assert not exc_info.value.body
+            assert ws.extra(WebSocketAttribute.subprotocol) == "test"
+            assert ws.extra(WebSocketAttribute.extensions) == expected_extensions
+
+    @pytest.mark.parametrize("reject_method", ["close", "denial"])
+    async def test_rejected(self, http_client: HTTPClient, reject_method: str) -> None:
+        async with http_client:
+            with pytest.raises(HTTPStatusError) as exc_info:
+                async with http_client.connect_ws(
+                    "/ws", params={"reject": reject_method}
+                ):
+                    pass
+
+        assert exc_info.value.status_code == 403
+        if reject_method == "denial":
+            assert exc_info.value.body == b"Rejected"
+        else:
+            assert exc_info.value.body is None
+
+    async def test_server_normal_close(self, http_client: HTTPClient) -> None:
+        async with http_client:
+            async with http_client.connect_ws(
+                "/ws", params={"close_code": "1000"}
+            ) as ws:
+                for _ in range(2):
+                    with pytest.raises(WebSocketConnectionEnded):
+                        await ws.receive()
+
+                with pytest.raises(WebSocketConnectionBroken) as exc_info:
+                    await ws.send(b"foo")
+
+                assert exc_info.value.code == 1000
+                assert exc_info.value.reason is None
+
+    async def test_server_abnormal_close(self, http_client: HTTPClient) -> None:
+        async with http_client:
+            async with http_client.connect_ws(
+                "/ws", params={"close_code": "1008"}
+            ) as ws:
+                for _ in range(2):
+                    with pytest.raises(WebSocketConnectionBroken) as exc_info:
+                        await ws.receive()
+
+                    assert exc_info.value.code == 1008
+                    assert exc_info.value.reason == "Policy violation"
+
+                with pytest.raises(WebSocketConnectionBroken) as exc_info:
+                    await ws.send(b"foo")
+
+                assert exc_info.value.code == 1008
+                assert exc_info.value.reason == "Policy violation"
 
 
 async def test_sse(http_client: HTTPClient) -> None:

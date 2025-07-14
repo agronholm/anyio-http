@@ -54,3 +54,5 @@ Exceptions
 .. autoexception:: HTTPStatusError
 .. autoexception:: ASGIError
 .. autoexception:: WebSocketError
+.. autoexception:: WebSocketConnectionBroken
+.. autoexception:: WebSocketConnectionEnded

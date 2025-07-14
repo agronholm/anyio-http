@@ -14,6 +14,8 @@ from ._sse import ServerEvent as ServerEvent
 from ._sse import ServerEventStream as ServerEventStream
 from ._websocket import WebSocketAttribute as WebSocketAttribute
 from ._websocket import WebSocketConnection as WebSocketConnection
+from ._websocket import WebSocketConnectionBroken as WebSocketConnectionBroken
+from ._websocket import WebSocketConnectionEnded as WebSocketConnectionEnded
 from ._websocket import WebSocketError as WebSocketError
 from ._wrappers import CBOR as CBOR
 from ._wrappers import JSON as JSON

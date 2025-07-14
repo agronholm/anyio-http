@@ -4,12 +4,12 @@ import sys
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
-from anyio import EndOfStream, TypedAttributeSet, typed_attribute
+from anyio import BrokenResourceError, EndOfStream, TypedAttributeSet, typed_attribute
 from anyio.abc import AnyByteStream, ObjectStream
 from anyio.lowlevel import checkpoint_if_cancelled
 from wsproto import ConnectionType
 from wsproto.connection import Connection
-from wsproto.events import BytesMessage, CloseConnection, Event, Ping, Pong, TextMessage
+from wsproto.events import BytesMessage, CloseConnection, Event, Ping, TextMessage
 from wsproto.extensions import Extension
 from wsproto.frame_protocol import CloseReason
 from wsproto.handshake import client_extensions_handshake
@@ -53,20 +53,43 @@ class WebSocketConnection(ObjectStream[bytes | str]):
         self._request_stream = request_stream
         self._extensions = extensions
         self._subprotocol = subprotocol
+        self._close_code: int | None = None
+        self._close_reason: str | None = None
 
+    @override
     async def receive(self) -> bytes | str:
-        while True:
-            if event := next(self._connection.events(), None):
-                if isinstance(event, BytesMessage | TextMessage):
-                    return event.data
-                elif isinstance(event, CloseConnection):
-                    await self._request_stream.aclose()
-                    raise EndOfStream
-                elif isinstance(event, Ping):
-                    data = self._connection.send(Pong(event.payload))
-                    await self._request_stream.send(data)
+        def maybe_raise_close_error() -> None:
+            if self._close_code is not None:
+                if self._close_code == CloseReason.NORMAL_CLOSURE:
+                    raise WebSocketConnectionEnded
+                else:
+                    raise WebSocketConnectionBroken(
+                        self._close_code, self._close_reason
+                    )
 
-            data = await self._request_stream.receive()
+        while True:
+            maybe_raise_close_error()
+            await checkpoint_if_cancelled()
+            if event := next(self._connection.events(), None):
+                match event:
+                    case BytesMessage() | TextMessage():
+                        return event.data
+                    case CloseConnection():
+                        self._close_code = event.code
+                        self._close_reason = event.reason or None
+                        await self._request_stream.aclose()
+                        maybe_raise_close_error()
+                    case Ping():
+                        await self._send_event(event.response())
+
+            try:
+                data = await self._request_stream.receive()
+            except EndOfStream as exc:
+                self._close_code = CloseReason.ABNORMAL_CLOSURE
+                raise WebSocketConnectionBroken(
+                    CloseReason.ABNORMAL_CLOSURE, "server closed connection prematurely"
+                ) from exc
+
             self._connection.receive_data(data)
 
     async def _send_event(self, event: Event) -> None:
@@ -76,6 +99,9 @@ class WebSocketConnection(ObjectStream[bytes | str]):
 
     @override
     async def send(self, item: bytes | str) -> None:
+        if self._close_code is not None:
+            raise WebSocketConnectionBroken(self._close_code, self._close_reason)
+
         event = TextMessage(item) if isinstance(item, str) else BytesMessage(item)
         await self._send_event(event)
 
@@ -84,12 +110,18 @@ class WebSocketConnection(ObjectStream[bytes | str]):
         raise NotImplementedError("websockets don't support half-closing")
 
     @override
-    async def aclose(self, code: int = 1000, reason: str | None = None) -> None:
+    async def aclose(
+        self, code: int = CloseReason.NORMAL_CLOSURE, reason: str | None = None
+    ) -> None:
+        if self._close_code is not None:
+            return
+
         try:
             await self._send_event(CloseConnection(code, reason))
         finally:
             await self._request_stream.aclose()
 
+    @override
     @property
     def extra_attributes(self) -> Mapping[Any, Callable[[], Any]]:
         return {
@@ -105,10 +137,26 @@ class WebSocketError(HTTPError):
     """Base class for all websocket errors."""
 
 
-class WebSocketConnectionClosed(WebSocketError, EndOfStream):
+class WebSocketConnectionBroken(WebSocketError, BrokenResourceError):
     """
-    Raised when the server closes a websocket connection.
+    Raised when the websocket connection is closed uncleanly.
+
+    If the closure was due to a transport-level problem, the code 1006 will be used,
+    and the underlying exception is stored in ``__cause__``.
+
+    :ivar code: the close code
+    :type code: int
+    :ivar reason: the close reason
+    :type reason: str | None
     """
 
-    def __init__(self, reason: str | None):
-        super().__init__(CloseReason.NORMAL_CLOSURE, reason)
+    def __init__(self, code: int, reason: str | None):
+        self.code = code
+        self.reason = reason
+
+
+class WebSocketConnectionEnded(WebSocketError, EndOfStream):
+    """
+    Raised when trying to receive from a websocket connection that the other end has
+    closed cleanly (with a code of 1000).
+    """

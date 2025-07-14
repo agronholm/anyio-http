@@ -123,7 +123,8 @@ class HTTP11Connection(HTTPConnection):
 
     async def connect(self, target: URL, *, headers: CIMultiDict) -> HTTP11TunnelStream:
         h11_response = await self._request("CONNECT", target, headers)
-        return HTTP11TunnelStream(self.transport_stream, h11_response)
+        trailing_data = self._connection.trailing_data[0]
+        return HTTP11TunnelStream(self.transport_stream, h11_response, trailing_data)
 
     async def connect_ws(
         self,
@@ -156,7 +157,10 @@ class HTTP11Connection(HTTPConnection):
                 isinstance(h11_response, h11.InformationalResponse)
                 and h11_response.status_code == 101
             ):
-                tunnel_stream = HTTP11TunnelStream(self.transport_stream, h11_response)
+                trailing_data = self._connection.trailing_data[0]
+                tunnel_stream = HTTP11TunnelStream(
+                    self.transport_stream, h11_response, trailing_data
+                )
                 subprotocol = tunnel_stream.headers.get("sec-websocket-protocol")
                 return WebSocketConnection(
                     tunnel_stream, proposed_extensions, subprotocol
@@ -190,21 +194,18 @@ class HTTP11TunnelStream(ByteStream):
         self,
         transport_stream: ByteStream,
         response: h11.Response | h11.InformationalResponse,
+        trailing_data: bytes | None = None,
     ) -> None:
         self._transport_stream = transport_stream
         self._status_code = response.status_code
         self._http_version = response.http_version.decode("ascii")
         self._raw_headers = response.headers.raw_items()
+        self._trailing_data = trailing_data or None
         self._closed = False
 
     @cached_property
     def headers(self) -> CIMultiDictProxy:
-        parsed_headers = CIMultiDict(
-            [
-                (key.decode("ascii"), value.decode("iso-8859-1"))
-                for key, value in self._raw_headers
-            ]
-        )
+        parsed_headers = parse_headers(self._raw_headers)
         del self._raw_headers
         return CIMultiDictProxy(parsed_headers)
 
@@ -224,6 +225,13 @@ class HTTP11TunnelStream(ByteStream):
 
     @override
     async def receive(self, max_bytes: int = 65536) -> bytes:
+        if self._trailing_data is not None:
+            data, self._trailing_data = (
+                self._trailing_data[:max_bytes],
+                self._trailing_data[max_bytes:] or None,
+            )
+            return data
+
         return await self._transport_stream.receive(max_bytes)
 
     @override
