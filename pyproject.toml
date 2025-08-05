@@ -26,7 +26,7 @@ classifiers = [
 ]
 requires-python = ">= 3.10"
 dependencies = [
-    "anyio@git+https://git@github.com/agronholm/anyio.git",
+    "anyio >= 4.10.0",
     "h11 >= 0.16.0",
     "h2 >= 4.2.0",
     "multidict >= 6.5.0",
