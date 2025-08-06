@@ -16,11 +16,11 @@ extensions = [
 templates_path = ["_templates"]
 source_suffix = ".rst"
 master_doc = "index"
-project = "anyio-http"
+project = "fetchling"
 author = "Alex Grönholm"
 copyright = "2025, " + author
 
-v = parse(get_version("anyio-http"))
+v = parse(get_version("fetchling"))
 version = v.base_version
 release = v.public
 

@@ -1,10 +1,10 @@
-Contributing to anyio-http
-==========================
+Contributing to Fetchling
+=========================
 
-If you wish to contribute a fix or feature to anyio-http, please follow the following
+If you wish to contribute a fix or feature to Fetchling, please follow the following
 guidelines.
 
-When you make a pull request against the main anyio-http codebase, Github runs the test
+When you make a pull request against the main Fetchling codebase, Github runs the test
 suite against your modified code. Before making a pull request, you should ensure that
 the modified code passes tests locally. To that end, the use of tox_ is recommended. The
 default tox run first runs ``pre-commit`` and then the actual test suite. To run the
@@ -13,8 +13,8 @@ checks on all environments in parallel, invoke tox with ``tox -p``.
 To build the documentation, run ``tox -e docs`` which will generate a directory named
 ``build`` in which you may view the formatted HTML documentation.
 
-Anyio-http uses pre-commit_ to perform several code style/quality checks. It is recommended
-to activate pre-commit_ on your local clone of the repository (using
+Fetchling uses pre-commit_ to perform several code style/quality checks. It is
+recommended to activate pre-commit_ on your local clone of the repository (using
 ``pre-commit install``) to ensure that your changes will pass the same checks on GitHub.
 
 .. _tox: https://tox.readthedocs.io/en/latest/install.html
@@ -26,9 +26,9 @@ Making a pull request on Github
 To get your changes merged to the main codebase, you need a Github account.
 
 #. Fork the repository (if you don't have your own fork of it yet) by navigating to the
-   `main anyio-http repository`_ and clicking on "Fork" near the top right corner.
+   `main Fetchling repository`_ and clicking on "Fork" near the top right corner.
 #. Clone the forked repository to your local machine with
-   ``git clone git@github.com/yourusername/anyio``.
+   ``git clone git@github.com/yourusername/fetchling``.
 #. Create a branch for your pull request, like ``git checkout -b myfixname``
 #. Make the desired changes to the code base.
 #. Commit your changes locally. If your changes close an existing issue, add the text
@@ -43,6 +43,6 @@ To get your changes merged to the main codebase, you need a Github account.
 
 If you have trouble, consult the `pull request making guide`_ on opensource.com.
 
-.. _main anyio-http repository: https://github.com/agronholm/anyio-http
+.. _main Fetchling repository: https://github.com/agronholm/fetchling
 .. _pull request making guide:
     https://opensource.com/article/19/7/create-pull-request-github

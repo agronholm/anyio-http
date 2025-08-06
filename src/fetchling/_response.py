@@ -9,7 +9,7 @@ from anyio import TypedAttributeSet, typed_attribute
 from anyio.abc import ByteReceiveStream
 from multidict import CIMultiDictProxy
 
-from anyio_http._exceptions import HTTPStatusError
+from ._exceptions import HTTPStatusError
 
 if sys.version_info >= (3, 12):
     from typing import override

@@ -11,7 +11,7 @@ from anyio import Path
 from anyio.abc import ByteReceiveStream
 from anyio.streams.buffered import BufferedByteReceiveStream
 
-from anyio_http._streams import AsyncGeneratorStream
+from ._streams import AsyncGeneratorStream
 
 JSONType: TypeAlias = (
     dict[str, "JSONType"]
@@ -104,7 +104,7 @@ class CBOR(ContentWrapper):
             from cbor2 import dumps
         except ModuleNotFoundError as exc:
             raise ImportError(
-                "cbor2 module not found - install with 'pip install anyio_http[cbor]'"
+                "cbor2 module not found - install with 'pip install fetchling[cbor]'"
             ) from exc
 
         def dump(value: Any, wrapper: CBOR) -> bytes:

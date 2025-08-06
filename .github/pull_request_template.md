@@ -25,7 +25,7 @@ If, say, your patch fixes issue <span>#</span>123, the entry should look like th
 
 ```
 - Fix big bad boo-boo in task groups
-  (`#123 <https://github.com/agronholm/anyio-http/issues/123>`_; PR by @yourgithubaccount)
+  (`#123 <https://github.com/agronholm/fetchling/issues/123>`_; PR by @yourgithubaccount)
 ```
 
 If there's no issue linked, just link to your pull request instead by updating the

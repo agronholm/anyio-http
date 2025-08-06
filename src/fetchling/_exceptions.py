@@ -9,7 +9,7 @@ class HTTPError(Exception):
 
 class HTTPStatusError(HTTPError):
     """
-    Raised by :meth:`~anyio_http.HTTPRequest.raise_for_status` and a number of other
+    Raised by :meth:`~HTTPRequest.raise_for_status` and a number of other
     ways when the server returns a non-successful status code.
 
     :ivar status_code: The HTTP status code

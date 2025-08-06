@@ -27,7 +27,7 @@ from starlette.websockets import WebSocket
 from wsproto.extensions import PerMessageDeflate
 from yarl import URL
 
-from anyio_http import (
+from fetchling import (
     CBOR,
     JSON,
     ContentWrapper,
@@ -391,7 +391,7 @@ class TestWebSocket:
             ) as ws,
         ):
             if transport == "asgi":
-                expected_extensions = ()
+                expected_extensions: tuple[str, ...] = ()
             else:
                 expected_extensions = ("permessage-deflate",)
                 assert ws.extra(SocketAttribute.family) in (

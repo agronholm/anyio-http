@@ -52,9 +52,9 @@ else:
 
 PoolKey: TypeAlias = tuple[str, str, int | None]
 
-_default_user_agent = "anyio-http"
+_default_user_agent = "fetchling"
 try:
-    _default_user_agent += f"/{version('anyio-http')}"
+    _default_user_agent += f"/{version('fetchling')}"
 except PackageNotFoundError:
     pass
 

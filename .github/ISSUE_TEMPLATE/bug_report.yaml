@@ -19,10 +19,10 @@ body:
             I have checked that my bug is still present in the latest release
           required: true
   - type: input
-    id: anyio-version
+    id: fetchling-version
     attributes:
-      label: anyio-http version
-      description: What version of anyio-http were you running?
+      label: Fetchling version
+      description: What version of fetchling were you running?
     validations:
       required: true
   - type: input

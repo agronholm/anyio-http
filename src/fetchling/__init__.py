@@ -24,7 +24,7 @@ from ._wrappers import Form as Form
 from ._wrappers import FormField as FormField
 
 for __value in list(locals().values()):
-    if getattr(__value, "__module__", "").startswith("anyio_http."):
+    if getattr(__value, "__module__", "").startswith("fetchling."):
         __value.__module__ = __name__
 
 locals().pop("__value", None)

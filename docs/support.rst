@@ -15,4 +15,4 @@ If you're fairly certain that you have discovered a bug, you can `file an issue`
 Github. If you feel unsure, come talk to us first! The issue tracker is **not** the
 proper venue for asking support questions.
 
-.. _file an issue: https://github.com/agronholm/anyio-http/issues
+.. _file an issue: https://github.com/agronholm/fetchling/issues

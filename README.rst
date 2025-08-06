@@ -1,29 +1,29 @@
-.. image:: https://github.com/agronholm/anyio-http/actions/workflows/test.yml/badge.svg
-  :target: https://github.com/agronholm/anyio-http/actions/workflows/test.yml
+.. image:: https://github.com/agronholm/fetchling/actions/workflows/test.yml/badge.svg
+  :target: https://github.com/agronholm/fetchling/actions/workflows/test.yml
   :alt: Build Status
-.. image:: https://coveralls.io/repos/github/agronholm/anyio-http/badge.svg?branch=master
+.. image:: https://coveralls.io/repos/github/agronholm/fetchling/badge.svg?branch=master
   :target: https://coveralls.io/github/agronholm/anyio?branch=master
   :alt: Code Coverage
-.. image:: https://readthedocs.org/projects/anyio-http/badge/?version=latest
+.. image:: https://readthedocs.org/projects/fetchling/badge/?version=latest
   :target: https://anyio.readthedocs.io/en/latest/?badge=latest
   :alt: Documentation
 .. image:: https://badges.gitter.im/gitterHQ/gitter.svg
   :target: https://gitter.im/python-trio/AnyIO
   :alt: Gitter chat
 
-AnyIO-HTTP provides both an asynchronous and synchronous HTTP client, backed by the
+Fetchling provides both an asynchronous and synchronous HTTP client, backed by the
 AnyIO_ library. It works on top of asyncio, Trio_ and any future event loop
 implementation supported by AnyIO.
 
 Documentation
 -------------
 
-View full documentation at: https://anyio-http.readthedocs.io/
+View full documentation at: https://fetchling.readthedocs.io/
 
 Features
 --------
 
-AnyIO-HTTP offers the following functionality:
+Fetchling offers the following functionality:
 
 * HTTP/1.1 and HTTP/2 support
 * WebSocket client

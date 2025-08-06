@@ -1,7 +1,7 @@
 API reference
 =============
 
-.. py:currentmodule:: anyio_http
+.. py:currentmodule:: fetchling
 
 Client
 ------

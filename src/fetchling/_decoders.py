@@ -50,7 +50,7 @@ class ZstdDecompressor(ContentDecoder, decoder="zstd"):
             except ModuleNotFoundError as exc:
                 raise ImportError(
                     "zstandard module not available; "
-                    "fix with 'pip install anyio-http[zstd]'"
+                    "fix with 'pip install fetchling[zstd]'"
                 ) from exc
 
             self._decompressor = ZstdDecompressor()
@@ -89,7 +89,7 @@ class BrotliDecompressor(ContentDecoder, decoder="brotli"):
             except ModuleNotFoundError as exc:
                 raise ImportError(
                     "brotli module not available; "
-                    "fix with 'pip install anyio-http[brotli]'"
+                    "fix with 'pip install fetchling[brotli]'"
                 ) from exc
 
         self._decompress = brotli.decompress

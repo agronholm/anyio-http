@@ -6,7 +6,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "anyio-http"
+name = "fetchling"
 description = "HTTP client library based on AnyIO"
 readme = "README.rst"
 authors = [{name = "Alex Grönholm", email = "alex.gronholm@nextday.fi"}]
@@ -37,10 +37,10 @@ dependencies = [
 dynamic = ["version"]
 
 [project.urls]
-Documentation = "https://anyio-http.readthedocs.io/en/latest/"
-Changelog = "https://anyio-http.readthedocs.io/en/stable/versionhistory.html"
-"Source code" = "https://github.com/agronholm/anyio-http"
-"Issue tracker" = "https://github.com/agronholm/anyio-http/issues"
+Documentation = "https://fetchling.readthedocs.io/en/latest/"
+Changelog = "https://fetchling.readthedocs.io/en/stable/versionhistory.html"
+"Source code" = "https://github.com/agronholm/fetchling"
+"Issue tracker" = "https://github.com/agronholm/fetchling/issues"
 
 [project.optional-dependencies]
 brotli = [
@@ -62,8 +62,8 @@ zstd = [
 
 [dependency-groups]
 test = [
-    "anyio[trio]@git+https://git@github.com/agronholm/anyio.git",
-    "anyio-http[brotli,cbor,json,opentelemetry,zstd]",
+    "anyio[trio]",
+    "fetchling[brotli,cbor,json,opentelemetry,zstd]",
     "coverage[toml] >= 7",
     "pytest >= 8.0",
     "sse-starlette >= 2.3.6",
@@ -159,7 +159,7 @@ package = "skip"
 
 [tool.tox.env.pyright]
 deps = ["pyright"]
-commands = [["pyright", "--verifytypes", "anyio-http"]]
+commands = [["pyright", "--verifytypes", "fetchling"]]
 
 [tool.tox.env.docs]
 depends = []
